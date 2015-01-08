@@ -1749,7 +1749,7 @@ LSM303D_mag::LSM303D_mag(LSM303D *parent) :
 
 LSM303D_mag::~LSM303D_mag()
 {
-	if (_mag_class_instance != -1)
+	if (_mag_class_instance >= 0) // <0 indicates registration error
 		unregister_class_devname(MAG_DEVICE_PATH, _mag_class_instance);
 }
 

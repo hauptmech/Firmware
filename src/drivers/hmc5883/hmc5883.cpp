@@ -418,7 +418,7 @@ HMC5883::init()
 
 	/* reset the device configuration */
 	reset();
-
+//BUG: Might return <1
 	_class_instance = register_class_devname(MAG_DEVICE_PATH);
 	_mag_orb_id = ORB_ID_TRIPLE(sensor_mag, _class_instance);
 
@@ -1360,7 +1360,7 @@ start(int external_bus, enum Rotation rotation)
 
 		}
 	}
-			
+
 
 	/* if this failed, attempt onboard sensor */
 	if (g_dev_int != nullptr) {
