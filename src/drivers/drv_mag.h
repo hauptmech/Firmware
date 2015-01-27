@@ -41,8 +41,10 @@
 #include <stdint.h>
 #include <sys/ioctl.h>
 
+#include "drv_device.h"
 #include "drv_sensor.h"
 #include "drv_orb_dev.h"
+
 
 #define MAG_DEVICE_PATH		"/dev/mag"
 
@@ -79,7 +81,15 @@ struct mag_scale {
 /*
  * ObjDev tag for raw magnetometer data.
  */
-ORB_DECLARE(sensor_mag);
+ORB_DECLARE(sensor_mag0);
+ORB_DECLARE(sensor_mag1);
+ORB_DECLARE(sensor_mag2);
+
+/*
+ * mag device types, for _device_id
+ */
+#define DRV_MAG_DEVTYPE_HMC5883 1
+#define DRV_MAG_DEVTYPE_LSM303D 2
 
 /*
  * ioctl() definitions

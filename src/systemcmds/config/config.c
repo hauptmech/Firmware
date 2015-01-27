@@ -1,8 +1,6 @@
 /****************************************************************************
  *
- *   Copyright (c) 2012, 2013 PX4 Development Team. All rights reserved.
- *   Author: Lorenz Meier <lm@inf.ethz.ch>
- *   Author: Julian Oes <joes@student.ethz.ch>
+ *   Copyright (c) 2012-2014 PX4 Development Team. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -60,6 +58,7 @@
 
 #include "systemlib/systemlib.h"
 #include "systemlib/err.h"
+#include "systemlib/param/param.h"
 
 __EXPORT int config_main(int argc, char *argv[]);
 
@@ -94,7 +93,6 @@ do_device(int argc, char *argv[])
 	}
 
 	int	fd;
-	int	ret;
 
 	fd = open(argv[0], 0);
 
@@ -103,6 +101,8 @@ do_device(int argc, char *argv[])
 		errx(1, "FATAL: no device found");
 
 	} else {
+
+		int	ret;
 
 		if (argc == 2 && !strcmp(argv[1], "block")) {
 
@@ -121,7 +121,7 @@ do_device(int argc, char *argv[])
 				errx(ret,"uORB publications could not be unblocked");
 
 		} else {
-			errx("no valid command: %s", argv[1]);
+			errx(1, "no valid command: %s", argv[1]);
 		}
 	}
 
@@ -132,7 +132,6 @@ static void
 do_gyro(int argc, char *argv[])
 {
 	int	fd;
-	int	ret;
 
 	fd = open(GYRO_DEVICE_PATH, 0);
 
@@ -141,6 +140,8 @@ do_gyro(int argc, char *argv[])
 		errx(1, "FATAL: no gyro found");
 
 	} else {
+
+		int ret;
 
 		if (argc == 2 && !strcmp(argv[0], "sampling")) {
 
@@ -173,8 +174,13 @@ do_gyro(int argc, char *argv[])
 				warnx("gyro self test FAILED! Check calibration:");
 				struct gyro_scale scale;
 				ret = ioctl(fd, GYROIOCGSCALE, (long unsigned int)&scale);
-				warnx("offsets: X: % 9.6f Y: % 9.6f Z: % 9.6f", scale.x_offset, scale.y_offset, scale.z_offset);
-				warnx("scale:   X: % 9.6f Y: % 9.6f Z: % 9.6f", scale.x_scale, scale.y_scale, scale.z_scale);
+
+				if (ret) {
+					err(1, "failed getting gyro scale");
+				}
+
+				warnx("offsets: X: % 9.6f Y: % 9.6f Z: % 9.6f", (double)scale.x_offset, (double)scale.y_offset, (double)scale.z_offset);
+				warnx("scale:   X: % 9.6f Y: % 9.6f Z: % 9.6f", (double)scale.x_scale, (double)scale.y_scale, (double)scale.z_scale);
 			} else {
 				warnx("gyro calibration and self test OK");
 			}
@@ -199,7 +205,6 @@ static void
 do_mag(int argc, char *argv[])
 {
 	int fd;
-	int ret;
 
 	fd = open(MAG_DEVICE_PATH, 0);
 
@@ -208,6 +213,8 @@ do_mag(int argc, char *argv[])
 		errx(1, "FATAL: no magnetometer found");
 
 	} else {
+
+		int ret;
 
 		if (argc == 2 && !strcmp(argv[0], "sampling")) {
 
@@ -240,8 +247,13 @@ do_mag(int argc, char *argv[])
 				warnx("mag self test FAILED! Check calibration:");
 				struct mag_scale scale;
 				ret = ioctl(fd, MAGIOCGSCALE, (long unsigned int)&scale);
-				warnx("offsets: X: % 9.6f Y: % 9.6f Z: % 9.6f", scale.x_offset, scale.y_offset, scale.z_offset);
-				warnx("scale:   X: % 9.6f Y: % 9.6f Z: % 9.6f", scale.x_scale, scale.y_scale, scale.z_scale);
+
+				if (ret) {
+					err(ret, "failed getting mag scale");
+				}
+
+				warnx("offsets: X: % 9.6f Y: % 9.6f Z: % 9.6f", (double)scale.x_offset, (double)scale.y_offset, (double)scale.z_offset);
+				warnx("scale:   X: % 9.6f Y: % 9.6f Z: % 9.6f", (double)scale.x_scale, (double)scale.y_scale, (double)scale.z_scale);
 			} else {
 				warnx("mag calibration and self test OK");
 			}
@@ -253,8 +265,11 @@ do_mag(int argc, char *argv[])
 		int srate = ioctl(fd, MAGIOCGSAMPLERATE, 0);
 		int prate = ioctl(fd, SENSORIOCGPOLLRATE, 0);
 		int range = ioctl(fd, MAGIOCGRANGE, 0);
+		int id = ioctl(fd, DEVIOCGDEVICEID,0);
+		int32_t calibration_id = 0;
+		param_get(param_find("SENS_MAG_ID"), &(calibration_id));
 
-		warnx("mag: \n\tsample rate:\t%d Hz\n\tread rate:\t%d Hz\n\trange:\t%d Ga", srate, prate, range);
+		warnx("mag: \n\tdevice id:\t%x\t(calibration is for device id %x)\n\tsample rate:\t%d Hz\n\tread rate:\t%d Hz\n\trange:\t%d Ga", id, calibration_id, srate, prate, range);
 
 		close(fd);
 	}
@@ -266,7 +281,6 @@ static void
 do_accel(int argc, char *argv[])
 {
 	int	fd;
-	int	ret;
 
 	fd = open(ACCEL_DEVICE_PATH, 0);
 
@@ -275,6 +289,8 @@ do_accel(int argc, char *argv[])
 		errx(1, "FATAL: no accelerometer found");
 
 	} else {
+
+		int ret;
 
 		if (argc == 2 && !strcmp(argv[0], "sampling")) {
 
@@ -307,8 +323,13 @@ do_accel(int argc, char *argv[])
 				warnx("accel self test FAILED! Check calibration:");
 				struct accel_scale scale;
 				ret = ioctl(fd, ACCELIOCGSCALE, (long unsigned int)&scale);
-				warnx("offsets: X: % 9.6f Y: % 9.6f Z: % 9.6f", scale.x_offset, scale.y_offset, scale.z_offset);
-				warnx("scale:   X: % 9.6f Y: % 9.6f Z: % 9.6f", scale.x_scale, scale.y_scale, scale.z_scale);
+
+				if (ret) {
+					err(ret, "failed getting accel scale");
+				}
+
+				warnx("offsets: X: % 9.6f Y: % 9.6f Z: % 9.6f", (double)scale.x_offset, (double)scale.y_offset, (double)scale.z_offset);
+				warnx("scale:   X: % 9.6f Y: % 9.6f Z: % 9.6f", (double)scale.x_scale, (double)scale.y_scale, (double)scale.z_scale);
 			} else {
 				warnx("accel calibration and self test OK");
 			}

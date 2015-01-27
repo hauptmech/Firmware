@@ -1,24 +1,17 @@
 #!nsh
 #
-# Standard apps for multirotors
+# Standard apps for multirotors:
+# att & pos estimator, att & pos control.
 #
 
-#
-# Start the attitude estimator
-#
 attitude_estimator_ekf start
- 
-#
-# Start position estimator
-#
+#ekf_att_pos_estimator start
 position_estimator_inav start
 
-#
-# Start attitude control
-#
-multirotor_att_control start
+mc_att_control start
+mc_pos_control start
 
 #
-# Start position control
+# Start Land Detector
 #
-multirotor_pos_control start
+land_detector start multicopter

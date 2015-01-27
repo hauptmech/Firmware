@@ -47,8 +47,7 @@
  * @addtogroup topics
  * @{
  */
-struct vehicle_rates_setpoint_s
-{
+struct vehicle_rates_setpoint_s {
 	uint64_t timestamp; /**< in microseconds since system start */
 
 	float roll;	/**< body angular rates in NED frame		*/
@@ -58,11 +57,12 @@ struct vehicle_rates_setpoint_s
 
 }; /**< vehicle_rates_setpoint */
 
- /**
- * @}
- */
+/**
+* @}
+*/
 
 /* register this as object request broker structure */
 ORB_DECLARE(vehicle_rates_setpoint);
-
+ORB_DECLARE(mc_virtual_rates_setpoint);
+ORB_DECLARE(fw_virtual_rates_setpoint);
 #endif

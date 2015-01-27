@@ -24,7 +24,9 @@ SRCS			 = test_adc.c \
 			   test_uart_loopback.c \
 			   test_uart_send.c \
 			   test_mixer.cpp \
+			   test_mathlib.cpp \
 			   test_file.c \
+			   test_file2.c \
 			   tests_main.c \
 			   test_param.c \
 			   test_ppm_loopback.c \
@@ -32,3 +34,6 @@ SRCS			 = test_adc.c \
 			   test_conv.cpp \
 			   test_mount.c \
 			   test_mtd.c
+
+EXTRACXXFLAGS = -Wframe-larger-than=2500 -Wno-float-equal -Wno-double-promotion
+

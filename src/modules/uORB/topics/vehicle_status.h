@@ -1,10 +1,6 @@
 /****************************************************************************
  *
- *   Copyright (C) 2012 PX4 Development Team. All rights reserved.
- *   Author: @author Lorenz Meier <lm@inf.ethz.ch>
- *           @author Petri Tanskanen <petri.tanskanen@inf.ethz.ch>
- *           @author Thomas Gubler <thomasgubler@student.ethz.ch>
- *           @author Julian Oes <joes@student.ethz.ch>
+ *   Copyright (C) 2012 - 2014 PX4 Development Team. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -45,6 +41,11 @@
  * All apps should write to subsystem_info:
  *
  *  (any app) --> subsystem_info (published) --> (commander app state machine)  --> vehicle_status --> (mavlink app)
+ *
+ * @author Lorenz Meier <lm@inf.ethz.ch>
+ * @author Petri Tanskanen <petri.tanskanen@inf.ethz.ch>
+ * @author Thomas Gubler <thomasgubler@student.ethz.ch>
+ * @author Julian Oes <julian@oes.ch>
  */
 
 #ifndef VEHICLE_STATUS_H_
@@ -58,28 +59,23 @@
  * @addtogroup topics @{
  */
 
-/* main state machine */
+/**
+ * Main state, i.e. what user wants. Controlled by RC or from ground station via telemetry link.
+ */
 typedef enum {
 	MAIN_STATE_MANUAL = 0,
-	MAIN_STATE_SEATBELT,
-	MAIN_STATE_EASY,
-	MAIN_STATE_AUTO,
+	MAIN_STATE_ALTCTL,
+	MAIN_STATE_POSCTL,
+	MAIN_STATE_AUTO_MISSION,
+	MAIN_STATE_AUTO_LOITER,
+	MAIN_STATE_AUTO_RTL,
+	MAIN_STATE_ACRO,
+	MAIN_STATE_OFFBOARD,
+	MAIN_STATE_MAX
 } main_state_t;
 
-/* navigation state machine */
-typedef enum {
-	NAVIGATION_STATE_DIRECT = 0,		// true manual control, no any stabilization
-	NAVIGATION_STATE_STABILIZE,		// attitude stabilization
-	NAVIGATION_STATE_ALTHOLD,		// attitude + altitude stabilization
-	NAVIGATION_STATE_VECTOR,		// attitude + altitude + position stabilization
-	NAVIGATION_STATE_AUTO_READY,	// AUTO, landed, reeady for takeoff
-	NAVIGATION_STATE_AUTO_TAKEOFF,	// detect takeoff using land detector and switch to desired AUTO mode
-	NAVIGATION_STATE_AUTO_LOITER,	// pause mission
-	NAVIGATION_STATE_AUTO_MISSION,	// fly mission
-	NAVIGATION_STATE_AUTO_RTL,		// Return To Launch, when home position switch to LAND
-	NAVIGATION_STATE_AUTO_LAND		// land and switch to AUTO_READY when landed (detect using land detector)
-} navigation_state_t;
-
+// If you change the order, add or remove arming_state_t states make sure to update the arrays
+// in state_machine_helper.cpp as well.
 typedef enum {
 	ARMING_STATE_INIT = 0,
 	ARMING_STATE_STANDBY,
@@ -87,7 +83,8 @@ typedef enum {
 	ARMING_STATE_ARMED_ERROR,
 	ARMING_STATE_STANDBY_ERROR,
 	ARMING_STATE_REBOOT,
-	ARMING_STATE_IN_AIR_RESTORE
+	ARMING_STATE_IN_AIR_RESTORE,
+	ARMING_STATE_MAX,
 } arming_state_t;
 
 typedef enum {
@@ -95,26 +92,27 @@ typedef enum {
 	HIL_STATE_ON
 } hil_state_t;
 
+/**
+ * Navigation state, i.e. "what should vehicle do".
+ */
 typedef enum {
-	MODE_SWITCH_MANUAL = 0,
-	MODE_SWITCH_ASSISTED,
-	MODE_SWITCH_AUTO
-} mode_switch_pos_t;
-
-typedef enum {
-	ASSISTED_SWITCH_SEATBELT = 0,
-	ASSISTED_SWITCH_EASY
-} assisted_switch_pos_t;
-
-typedef enum {
-	RETURN_SWITCH_NONE = 0,
-	RETURN_SWITCH_RETURN
-} return_switch_pos_t;
-
-typedef enum {
-	MISSION_SWITCH_NONE = 0,
-	MISSION_SWITCH_MISSION
-} mission_switch_pos_t;
+	NAVIGATION_STATE_MANUAL = 0,		/**< Manual mode */
+	NAVIGATION_STATE_ALTCTL,		/**< Altitude control mode */
+	NAVIGATION_STATE_POSCTL,		/**< Position control mode */
+	NAVIGATION_STATE_AUTO_MISSION,		/**< Auto mission mode */
+	NAVIGATION_STATE_AUTO_LOITER,		/**< Auto loiter mode */
+	NAVIGATION_STATE_AUTO_RTL,		/**< Auto return to launch mode */
+	NAVIGATION_STATE_AUTO_RCRECOVER,	/**< RC recover mode */
+	NAVIGATION_STATE_AUTO_RTGS,		/**< Auto return to groundstation on data link loss */
+	NAVIGATION_STATE_AUTO_LANDENGFAIL,	/**< Auto land on engine failure */
+	NAVIGATION_STATE_AUTO_LANDGPSFAIL,	/**< Auto land on gps failure (e.g. open loop loiter down) */
+	NAVIGATION_STATE_ACRO,			/**< Acro mode */
+	NAVIGATION_STATE_LAND,			/**< Land mode */
+	NAVIGATION_STATE_DESCEND,		/**< Descend mode (no position control) */
+	NAVIGATION_STATE_TERMINATION,		/**< Termination mode */
+	NAVIGATION_STATE_OFFBOARD,
+	NAVIGATION_STATE_MAX,
+} navigation_state_t;
 
 enum VEHICLE_MODE_FLAG {
 	VEHICLE_MODE_FLAG_SAFETY_ARMED = 128,
@@ -131,31 +129,34 @@ enum VEHICLE_MODE_FLAG {
  * Should match 1:1 MAVLink's MAV_TYPE ENUM
  */
 enum VEHICLE_TYPE {
-	VEHICLE_TYPE_GENERIC=0, /* Generic micro air vehicle. | */
-	VEHICLE_TYPE_FIXED_WING=1, /* Fixed wing aircraft. | */
-	VEHICLE_TYPE_QUADROTOR=2, /* Quadrotor | */
-	VEHICLE_TYPE_COAXIAL=3, /* Coaxial helicopter | */
-	VEHICLE_TYPE_HELICOPTER=4, /* Normal helicopter with tail rotor. | */
-	VEHICLE_TYPE_ANTENNA_TRACKER=5, /* Ground installation | */
-	VEHICLE_TYPE_GCS=6, /* Operator control unit / ground control station | */
-	VEHICLE_TYPE_AIRSHIP=7, /* Airship, controlled | */
-	VEHICLE_TYPE_FREE_BALLOON=8, /* Free balloon, uncontrolled | */
-	VEHICLE_TYPE_ROCKET=9, /* Rocket | */
-	VEHICLE_TYPE_GROUND_ROVER=10, /* Ground rover | */
-	VEHICLE_TYPE_SURFACE_BOAT=11, /* Surface vessel, boat, ship | */
-	VEHICLE_TYPE_SUBMARINE=12, /* Submarine | */
-	VEHICLE_TYPE_HEXAROTOR=13, /* Hexarotor | */
-	VEHICLE_TYPE_OCTOROTOR=14, /* Octorotor | */
-	VEHICLE_TYPE_TRICOPTER=15, /* Octorotor | */
-	VEHICLE_TYPE_FLAPPING_WING=16, /* Flapping wing | */
-	VEHICLE_TYPE_KITE=17, /* Kite | */
-	VEHICLE_TYPE_ENUM_END=18, /*  | */
+	VEHICLE_TYPE_GENERIC = 0, /* Generic micro air vehicle. | */
+	VEHICLE_TYPE_FIXED_WING = 1, /* Fixed wing aircraft. | */
+	VEHICLE_TYPE_QUADROTOR = 2, /* Quadrotor | */
+	VEHICLE_TYPE_COAXIAL = 3, /* Coaxial helicopter | */
+	VEHICLE_TYPE_HELICOPTER = 4, /* Normal helicopter with tail rotor. | */
+	VEHICLE_TYPE_ANTENNA_TRACKER = 5, /* Ground installation | */
+	VEHICLE_TYPE_GCS = 6, /* Operator control unit / ground control station | */
+	VEHICLE_TYPE_AIRSHIP = 7, /* Airship, controlled | */
+	VEHICLE_TYPE_FREE_BALLOON = 8, /* Free balloon, uncontrolled | */
+	VEHICLE_TYPE_ROCKET = 9, /* Rocket | */
+	VEHICLE_TYPE_GROUND_ROVER = 10, /* Ground rover | */
+	VEHICLE_TYPE_SURFACE_BOAT = 11, /* Surface vessel, boat, ship | */
+	VEHICLE_TYPE_SUBMARINE = 12, /* Submarine | */
+	VEHICLE_TYPE_HEXAROTOR = 13, /* Hexarotor | */
+	VEHICLE_TYPE_OCTOROTOR = 14, /* Octorotor | */
+	VEHICLE_TYPE_TRICOPTER = 15, /* Octorotor | */
+	VEHICLE_TYPE_FLAPPING_WING = 16, /* Flapping wing | */
+	VEHICLE_TYPE_KITE = 17, /* Kite | */
+	VEHICLE_TYPE_ONBOARD_CONTROLLER=18, /* Onboard companion controller | */
+	VEHICLE_TYPE_VTOL_DUOROTOR = 19, /* Vtol with two engines */
+	VEHICLE_TYPE_VTOL_QUADROTOR = 20, /* Vtol with four engines*/
+	VEHICLE_TYPE_ENUM_END = 21 /*  | */
 };
 
 enum VEHICLE_BATTERY_WARNING {
-    VEHICLE_BATTERY_WARNING_NONE = 0,	/**< no battery low voltage warning active */
-    VEHICLE_BATTERY_WARNING_LOW,	/**< warning of low voltage */
-    VEHICLE_BATTERY_WARNING_CRITICAL	/**< alerting of critical voltage */
+	VEHICLE_BATTERY_WARNING_NONE = 0,	/**< no battery low voltage warning active */
+	VEHICLE_BATTERY_WARNING_LOW,	/**< warning of low voltage */
+	VEHICLE_BATTERY_WARNING_CRITICAL	/**< alerting of critical voltage */
 };
 
 /**
@@ -168,56 +169,71 @@ enum VEHICLE_BATTERY_WARNING {
  *
  * Encodes the complete system state and is set by the commander app.
  */
-struct vehicle_status_s
-{
+struct vehicle_status_s {
 	/* use of a counter and timestamp recommended (but not necessary) */
 
 	uint16_t counter;   /**< incremented by the writing thread everytime new data is stored */
 	uint64_t timestamp; /**< in microseconds since system start, is set whenever the writing thread stores new data */
 
-	main_state_t main_state;				/**< main state machine */
-	navigation_state_t navigation_state;	/**< navigation state machine */
+	main_state_t main_state;		    	/**< main state machine */
+	navigation_state_t nav_state;		/**< set navigation state machine to specified value */
 	arming_state_t arming_state;			/**< current arming state */
-	hil_state_t hil_state;					/**< current hil state */
+	hil_state_t hil_state;				/**< current hil state */
+	bool failsafe;					/**< true if system is in failsafe state */
 
 	int32_t system_type;				/**< system type, inspired by MAVLink's VEHICLE_TYPE enum */
 	int32_t	system_id;				/**< system id, inspired by MAVLink's system ID field */
 	int32_t component_id;				/**< subsystem / component id, inspired by MAVLink's component ID field */
 
-	bool is_rotary_wing;
+	bool is_rotary_wing;				/**< True if system is in rotary wing configuration, so for a VTOL
+							  this is only true while flying as a multicopter */
+	bool is_vtol;					/**< True if the system is VTOL capable */
 
-	mode_switch_pos_t mode_switch;
-	return_switch_pos_t return_switch;
-	assisted_switch_pos_t assisted_switch;
-	mission_switch_pos_t mission_switch;
+	bool vtol_fw_permanent_stab;	/**< True if vtol should stabilize attitude for fw in manual mode */
 
 	bool condition_battery_voltage_valid;
 	bool condition_system_in_air_restore;	/**< true if we can restore in mid air */
 	bool condition_system_sensors_initialized;
 	bool condition_system_returned_to_home;
 	bool condition_auto_mission_available;
-	bool condition_global_position_valid;		/**< set to true by the commander app if the quality of the gps signal is good enough to use it in the position estimator */
+	bool condition_global_position_valid;		/**< set to true by the commander app if the quality of the position estimate is good enough to use it for navigation */
 	bool condition_launch_position_valid;		/**< indicates a valid launch position */
 	bool condition_home_position_valid;		/**< indicates a valid home position (a valid home position is not always a valid launch) */
 	bool condition_local_position_valid;
 	bool condition_local_altitude_valid;
 	bool condition_airspeed_valid;			/**< set to true by the commander app if there is a valid airspeed measurement available */
 	bool condition_landed;					/**< true if vehicle is landed, always true if disarmed */
+	bool condition_power_input_valid;		/**< set if input power is valid */
+	float avionics_power_rail_voltage;		/**< voltage of the avionics power rail */
 
 	bool rc_signal_found_once;
 	bool rc_signal_lost;				/**< true if RC reception lost */
+	uint64_t rc_signal_lost_timestamp;		/**< Time at which the RC reception was lost */
+	bool rc_signal_lost_cmd;				/**< true if RC lost mode is commanded */
 	bool rc_input_blocked;				/**< set if RC input should be ignored */
+
+	bool data_link_lost;				/**< datalink to GCS lost */
+	bool data_link_lost_cmd;			/**< datalink to GCS lost mode commanded */
+	uint8_t data_link_lost_counter;			/**< counts unique data link lost events */
+	bool engine_failure;				/** Set to true if an engine failure is detected */
+	bool engine_failure_cmd;			/** Set to true if an engine failure mode is commanded */
+	bool gps_failure;				/** Set to true if a gps failure is detected */
+	bool gps_failure_cmd;				/** Set to true if a gps failure mode is commanded */
+
+	bool barometer_failure;				/** Set to true if a barometer failure is detected */
 
 	bool offboard_control_signal_found_once;
 	bool offboard_control_signal_lost;
 	bool offboard_control_signal_weak;
 	uint64_t offboard_control_signal_lost_interval;	/**< interval in microseconds without an offboard control message */
+	bool offboard_control_set_by_command; /**< true if the offboard mode was set by a mavlink command
+						    and should not be overridden by RC */
 
 	/* see SYS_STATUS mavlink message for the following */
 	uint32_t onboard_control_sensors_present;
 	uint32_t onboard_control_sensors_enabled;
 	uint32_t onboard_control_sensors_health;
-	
+
 	float load;					/**< processor load from 0 to 1 */
 	float battery_voltage;
 	float battery_current;
@@ -230,6 +246,11 @@ struct vehicle_status_s
 	uint16_t errors_count2;
 	uint16_t errors_count3;
 	uint16_t errors_count4;
+
+	bool circuit_breaker_engaged_power_check;
+	bool circuit_breaker_engaged_airspd_check;
+	bool circuit_breaker_engaged_enginefailure_check;
+	bool circuit_breaker_engaged_gpsfailure_check;
 };
 
 /**
