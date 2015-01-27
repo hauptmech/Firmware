@@ -30,7 +30,8 @@ MODULES		+= systemcmds/top
 MODULES		+= systemcmds/tests
 MODULES		+= systemcmds/config
 MODULES		+= systemcmds/nshterm
-MODULES		+= systemcmds/hw_ver
+#MODULES		+= systemcmds/hw_ver
+MODULES		+= systemcmds/ver
 
 #
 # Library modules

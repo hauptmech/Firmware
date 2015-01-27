@@ -110,6 +110,40 @@ __BEGIN_DECLS
 
 extern void stm32_spiinitialize(void);
 
+/****************************************************************************************************
+ * Name: stm32_usbinitialize
+ *
+ * Description:
+ *   Called from stm32_usbinitialize very early in inialization to setup USB-related
+ *   GPIO pins for the STM32F4Discovery board.
+ *
+ ****************************************************************************************************/
+
+#ifdef CONFIG_STM32_OTGFS
+extern void stm32_usbinitialize(void);
+#endif
+
+
+/****************************************************************************
+ * Name: nsh_archinitialize
+ *
+ * Description:
+ *   Perform architecture specific initialization for NSH.
+ *
+ *   CONFIG_NSH_ARCHINIT=y :
+ *     Called from the NSH library
+ *
+ *   CONFIG_BOARD_INITIALIZE=y, CONFIG_NSH_LIBRARY=y, &&
+ *   CONFIG_NSH_ARCHINIT=n :
+ *     Called from board_initialize().
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_NSH_LIBRARY
+extern int nsh_archinitialize(void);
+#endif
+
+
 #endif /* __ASSEMBLY__ */
 
 __END_DECLS
